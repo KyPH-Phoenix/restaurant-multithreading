@@ -1,12 +1,12 @@
 package net.axisdata.restaurant.controller;
 
-import net.axisdata.restaurant.dto.SeatDTO;
-
 import net.axisdata.restaurant.service.RestaurantService;
+
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
@@ -17,7 +17,8 @@ public class RestaurantController {
 
     @PostMapping("/seat")
     @ResponseBody
-    public void request(@RequestBody SeatDTO seatDTO) {
-        return restaurantService.useSeat(seatDTO) + "";
+    public String request(@RequestParam String name, @RequestParam int time,
+                          @RequestParam int count, @RequestParam int waitTime) {
+        return restaurantService.useSeat(name, time, count, waitTime) + "";
     }
 }
