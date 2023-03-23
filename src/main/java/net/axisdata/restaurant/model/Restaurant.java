@@ -13,8 +13,6 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class Restaurant {
     private static final Logger logger = LoggerFactory.getLogger(Restaurant.class);
@@ -44,13 +42,11 @@ public class Restaurant {
             for ( Object o : jsonTableArray) {
                 int nSeats = Integer.parseInt(o.toString());
                 if (nSeats > biggest) biggest = nSeats;
-                tableList.add(new Table(nSeats));
+                tableList.add(new Table(nSeats, restaurant.getObject()));
             }
 
             restaurant.biggestTable = biggest;
             restaurant.tables = tableList;
-
-            restaurant.initiateTableChecker();
 
             return restaurant;
         } catch (FileNotFoundException e) {
@@ -72,36 +68,5 @@ public class Restaurant {
 
     public Object getObject() {
         return object;
-    }
-
-    private final ExecutorService executor = Executors.newFixedThreadPool(1);
-    private final Runnable checkTablesTask = () -> {
-        long millis = 300;
-        while (true) {
-            tables.forEach(table -> {
-                synchronized (object) {
-                    if (!table.isOccupied()) object.notifyAll();
-                    else {
-                        table.reduceWaitTime(millis);
-                        if (table.getWaitTime() <= 0) {
-                            table.setWaitTime(0);
-                            table.setOccupied(false);
-                            logger.info("table cleared");
-                            object.notifyAll();
-                        }
-                    }
-                }
-            });
-
-            try {
-                Thread.sleep(millis);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    };
-
-    private void initiateTableChecker() {
-        executor.execute(checkTablesTask);
     }
 }
