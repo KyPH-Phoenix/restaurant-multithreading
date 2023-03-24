@@ -38,12 +38,4 @@ public class Table {
     public long getWaitTime() {
         return waitTime;
     }
-
-    public void setWaitTime(long waitTime) {
-        this.waitTime = waitTime;
-    }
-
-    public void reduceWaitTime(long waitTime) {
-        this.waitTime -= waitTime;
-    }
 }

@@ -54,11 +54,11 @@ public class Restaurant {
 
             return restaurant;
         } catch (FileNotFoundException e) {
-            throw new RuntimeException("File not found");
+            throw new RuntimeException(e);
         } catch (IOException e) {
-            throw new RuntimeException("IOexception");
+            throw new RuntimeException(e);
         } catch (ParseException e) {
-            throw new RuntimeException("Could not parse");
+            throw new RuntimeException(e);
         }
     }
 

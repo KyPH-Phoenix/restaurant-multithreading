@@ -52,7 +52,6 @@ public class RestaurantService {
         lock.lock();
         for (Table table : restaurant.getTables()) {
             if (!table.isOccupied() && table.getSeats() >= count) {
-                //table.ocuppy(time);
                 restaurant.manageTable(time, table);
                 logger.info("{} occupies a table. ({} seats)", name, table.getSeats());
                 occupied = true;
