@@ -2,8 +2,8 @@ package net.axisdata.restaurant.service;
 
 import net.axisdata.restaurant.model.Restaurant;
 import net.axisdata.restaurant.model.Table;
-
 import net.axisdata.restaurant.model.TableStatus;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
