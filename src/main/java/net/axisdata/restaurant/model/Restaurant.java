@@ -1,5 +1,8 @@
 package net.axisdata.restaurant.model;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+
 import org.json.simple.JSONArray;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -7,22 +10,20 @@ import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Restaurant {
     private static final Logger logger = LoggerFactory.getLogger(Restaurant.class);
     private static Restaurant restaurant;
-    private List<Table> tables;
+    private Int2ObjectMap<TableStatus> tables;
     private int biggestTable;
-    private final Object object = new Object();
+    private Object[] mutexes;
     private ExecutorService executor;
+
 
     private Restaurant() {
 
@@ -39,30 +40,43 @@ public class Restaurant {
             JSONParser parser = new JSONParser();
 
             JSONArray jsonTableArray = (JSONArray) parser.parse(fileReader);
-            List<Table> tableList = new ArrayList<>();
             int biggest = 0;
 
-            for ( Object o : jsonTableArray) {
+            Int2ObjectMap<TableStatus> tableMap = new Int2ObjectOpenHashMap<>();
+
+            int nTables = 0;
+
+            for (Object o : jsonTableArray) {
                 int nSeats = Integer.parseInt(o.toString());
                 if (nSeats > biggest) biggest = nSeats;
-                tableList.add(new Table(nSeats));
+
+                TableStatus tableStatus = tableMap.computeIfAbsent(nSeats, key -> new TableStatus());
+
+                tableStatus.getFreeList().add(new Table(nSeats));
+
+                nTables++;
             }
 
-            restaurant.executor = Executors.newFixedThreadPool(tableList.size());
+            Object[] mutexes = new Object[biggest];
+
+            for (int i = 0; i < biggest; i++) {
+                mutexes[i] = new Object();
+            }
+
+            restaurant.mutexes = mutexes;
+            restaurant.executor = Executors.newFixedThreadPool(nTables);
             restaurant.biggestTable = biggest;
-            restaurant.tables = tableList;
+            restaurant.tables = tableMap;
+
+            logger.info("Restaurant created succesfully.");
 
             return restaurant;
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (ParseException e) {
+        } catch (ParseException | IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public List<Table> getTables() {
+    public Int2ObjectMap<TableStatus> getTables() {
         return tables;
     }
 
@@ -70,13 +84,13 @@ public class Restaurant {
         return biggestTable;
     }
 
-    public Object getObject() {
-        return object;
+    public Object[] getMutexes() {
+        return mutexes;
     }
 
-    public void manageTable(int time, Table table) {
+    public void occupyTable(int time, Table table, String name) {
         executor.execute(() -> {
-            table.ocuppy(time);
+            logger.info("{} seats table occupied for {}ms. ({})", table.getSeats(), time, name);
 
             try {
                 Thread.sleep(time);
@@ -84,10 +98,15 @@ public class Restaurant {
                 throw new RuntimeException(e);
             }
 
-            table.free();
+            this.tables.get(table.getSeats()).getOccupiedList().remove(table);
+            this.tables.get(table.getSeats()).getFreeList().add(table);
+            logger.info("table cleared. ({} seats, {})", table.getSeats(), name);
 
-            synchronized (this.object) {
-                this.object.notifyAll();
+            for (int i = table.getSeats() - 1; i >= 0; i--) {
+                Object mutex = this.mutexes[i];
+                synchronized (mutex) {
+                    mutex.notifyAll();
+                }
             }
         });
     }

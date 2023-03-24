@@ -14,7 +14,7 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-
+	implementation 'it.unimi.dsi:fastutil:8.5.12'
 	implementation 'com.googlecode.json-simple:json-simple:1.1.1'
 	implementation 'org.slf4j:slf4j-api:2.0.7'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
