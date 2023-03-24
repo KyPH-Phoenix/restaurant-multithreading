@@ -18,6 +18,8 @@ public class RestaurantController {
     @ResponseBody
     public String request(@RequestParam String name, @RequestParam int time,
                           @RequestParam int count, @RequestParam int waitTime) {
-        return restaurantService.useSeat(name, time, count, waitTime) + "";
+        return restaurantService.useSeat(name, time, count, waitTime) ?
+                name + " successfully occupied a table.\n" :
+                name + " couldn't occupy a table.\n";
     }
 }

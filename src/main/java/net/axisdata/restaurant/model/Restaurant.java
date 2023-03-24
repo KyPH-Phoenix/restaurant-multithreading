@@ -13,6 +13,8 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Restaurant {
     private static final Logger logger = LoggerFactory.getLogger(Restaurant.class);
@@ -20,6 +22,7 @@ public class Restaurant {
     private List<Table> tables;
     private int biggestTable;
     private final Object object = new Object();
+    private ExecutorService executor;
 
     private Restaurant() {
 
@@ -42,9 +45,10 @@ public class Restaurant {
             for ( Object o : jsonTableArray) {
                 int nSeats = Integer.parseInt(o.toString());
                 if (nSeats > biggest) biggest = nSeats;
-                tableList.add(new Table(nSeats, restaurant.getObject()));
+                tableList.add(new Table(nSeats));
             }
 
+            restaurant.executor = Executors.newFixedThreadPool(tableList.size());
             restaurant.biggestTable = biggest;
             restaurant.tables = tableList;
 
@@ -68,5 +72,23 @@ public class Restaurant {
 
     public Object getObject() {
         return object;
+    }
+
+    public void manageTable(int time, Table table) {
+        executor.execute(() -> {
+            table.ocuppy(time);
+
+            try {
+                Thread.sleep(time);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+            table.free();
+
+            synchronized (this.object) {
+                this.object.notifyAll();
+            }
+        });
     }
 }

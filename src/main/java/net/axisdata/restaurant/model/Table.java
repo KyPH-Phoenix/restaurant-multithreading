@@ -3,17 +3,13 @@ package net.axisdata.restaurant.model;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 public class Table {
-    private int seats;
+    private final int seats;
     private boolean occupied = false;
     private long waitTime = 0;
-    private final Object object;
+    private final Logger logger = LoggerFactory.getLogger(Restaurant.class);
 
-    public Table(int nSeats, Object object) {
-        this.object = object;
+    public Table(int nSeats) {
         this.seats = nSeats;
     }
 
@@ -21,41 +17,22 @@ public class Table {
         return this.seats;
     }
 
-    public void setSeats(int seats) {
-        this.seats = seats;
-    }
-
     public boolean isOccupied() {
         return occupied;
-    }
-
-    public void setOccupied(boolean occupied) {
-        this.occupied = occupied;
     }
 
     public void ocuppy(long time) {
         this.occupied = true;
         this.waitTime = time;
 
-        final ExecutorService executor = Executors.newFixedThreadPool(1);
-        final Runnable checkTableTask = () -> {
-            try {
-                Thread.sleep(this.waitTime);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+        logger.info("{} seats table occupied for {}ms.", this.seats, time);
+    }
 
-            this.occupied = false;
-            this.waitTime = 0;
-            final Logger logger = LoggerFactory.getLogger(Table.class);
-            logger.info("table cleared");
+    public void free() {
+        this.occupied = false;
+        this.waitTime = 0;
 
-            synchronized (this.object) {
-                this.object.notifyAll();
-            }
-        };
-
-        executor.execute(checkTableTask);
+        logger.info("table cleared. ({} seats)", this.seats);
     }
 
     public long getWaitTime() {
@@ -68,9 +45,5 @@ public class Table {
 
     public void reduceWaitTime(long waitTime) {
         this.waitTime -= waitTime;
-    }
-
-    public Object getObject() {
-        return object;
     }
 }

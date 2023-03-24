@@ -50,11 +50,11 @@ public class RestaurantService {
         logger.info("{} enters the take table function.", name);
 
         lock.lock();
-
         for (Table table : restaurant.getTables()) {
             if (!table.isOccupied() && table.getSeats() >= count) {
-                table.ocuppy(time);
-                logger.info("{} occupies a table.", name);
+                //table.ocuppy(time);
+                restaurant.manageTable(time, table);
+                logger.info("{} occupies a table. ({} seats)", name, table.getSeats());
                 occupied = true;
                 break;
             }
@@ -65,5 +65,3 @@ public class RestaurantService {
         return occupied;
     }
 }
-
-
