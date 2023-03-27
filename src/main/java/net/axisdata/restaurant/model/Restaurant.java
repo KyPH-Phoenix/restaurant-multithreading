@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import java.io.FileReader;
 import java.io.IOException;
 
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -21,13 +23,10 @@ public class Restaurant {
     private static Restaurant restaurant;
     private Int2ObjectMap<TableStatus> tables;
     private int biggestTable;
-    private Object[] mutexes;
     private ExecutorService executor;
+    private final Queue<RequestData> requests = new PriorityQueue<>((req1, req2) -> Integer.compare(req2.getCount(), req1.getCount()));
 
-
-    private Restaurant() {
-
-    }
+    private Restaurant() {}
 
     public static Restaurant getInstance() {
         if (restaurant != null) return restaurant;
@@ -52,18 +51,11 @@ public class Restaurant {
 
                 TableStatus tableStatus = tableMap.computeIfAbsent(nSeats, key -> new TableStatus());
 
-                tableStatus.getFreeList().add(new Table(nSeats));
+                tableStatus.getFreeList().add(nSeats);
 
                 nTables++;
             }
 
-            Object[] mutexes = new Object[biggest];
-
-            for (int i = 0; i < biggest; i++) {
-                mutexes[i] = new Object();
-            }
-
-            restaurant.mutexes = mutexes;
             restaurant.executor = Executors.newFixedThreadPool(nTables);
             restaurant.biggestTable = biggest;
             restaurant.tables = tableMap;
@@ -84,13 +76,9 @@ public class Restaurant {
         return biggestTable;
     }
 
-    public Object[] getMutexes() {
-        return mutexes;
-    }
-
-    public void occupyTable(int time, Table table, String name) {
+    public void occupyTable(int time, Integer tableSeats, String name) {
         executor.execute(() -> {
-            logger.info("{} seats table occupied for {}ms. ({})", table.getSeats(), time, name);
+            logger.info("{} seats table occupied for {}ms. ({})", tableSeats, time, name);
 
             try {
                 Thread.sleep(time);
@@ -98,16 +86,26 @@ public class Restaurant {
                 throw new RuntimeException(e);
             }
 
-            this.tables.get(table.getSeats()).getOccupiedList().remove(table);
-            this.tables.get(table.getSeats()).getFreeList().add(table);
-            logger.info("table cleared. ({} seats, {})", table.getSeats(), name);
+            this.tables.get((int) tableSeats).getOccupiedList().remove(tableSeats);
+            this.tables.get((int) tableSeats).getFreeList().add(tableSeats);
+            logger.info("table cleared. ({} seats, {})", tableSeats, name);
 
-            for (int i = table.getSeats() - 1; i >= 0; i--) {
-                Object mutex = this.mutexes[i];
-                synchronized (mutex) {
-                    mutex.notifyAll();
+            for (RequestData req : this.requests) {
+                if (tableSeats >= req.getCount()) {
+                    synchronized (req.getMutex()) {
+                        req.getMutex().notifyAll();
+                    }
+                    break;
                 }
             }
         });
+    }
+
+    public void addRequest(RequestData request) {
+        this.requests.add(request);
+    }
+
+    public void deleteRequest(RequestData request) {
+        this.requests.remove(request);
     }
 }

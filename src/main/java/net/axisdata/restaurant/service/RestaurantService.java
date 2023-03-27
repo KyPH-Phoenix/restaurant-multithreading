@@ -1,7 +1,7 @@
 package net.axisdata.restaurant.service;
 
+import net.axisdata.restaurant.model.RequestData;
 import net.axisdata.restaurant.model.Restaurant;
-import net.axisdata.restaurant.model.Table;
 import net.axisdata.restaurant.model.TableStatus;
 
 import org.slf4j.Logger;
@@ -27,22 +27,31 @@ public class RestaurantService {
 
         waitTime *= 1000;
         long arriveStamp = System.currentTimeMillis();
+        boolean queuedRequest = false;
+        RequestData request = new RequestData(count);
 
         logger.info("{} enters the take table function, request {}.", name, count);
         while (arriveStamp + waitTime > System.currentTimeMillis()) {
             try {
-                if (takeTable(count, time, name)) return true;
+                if (takeTable(count, time, name)) {
+                    if (queuedRequest) restaurant.deleteRequest(request);
+                    return true;
+                }
 
                 long currentWaitTime = waitTime - (System.currentTimeMillis() - arriveStamp);
 
-                synchronized (restaurant.getMutexes()[count - 1]) {
-                    restaurant.getMutexes()[count - 1].wait(currentWaitTime);
+                if (!queuedRequest) {
+                    restaurant.addRequest(request);
+                    queuedRequest = true;
                 }
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+
+                synchronized (request.getMutex()) {
+                    request.getMutex().wait(currentWaitTime);
+                }
+            } catch (InterruptedException e) { logger.error("Task interrupted, continuing"); }
         }
 
+        restaurant.deleteRequest(request);
         logger.info("{} went away.", name);
         return false;
     }
@@ -53,19 +62,20 @@ public class RestaurantService {
             TableStatus tableStatus = restaurant.getTables().get(i);
             if (tableStatus == null) continue;
 
-            List<Table> freeTables = tableStatus.getFreeList();
+            List<Integer> freeTables = tableStatus.getFreeList();
             if (freeTables == null || freeTables.isEmpty()) continue;
 
-            Table table = freeTables.get(0);
+            Integer tableSeats = freeTables.get(0);
 
-            restaurant.occupyTable(time, table, name);
+            restaurant.occupyTable(time, tableSeats, name);
 
-            freeTables.remove(table);
-            tableStatus.getOccupiedList().add(table);
+            freeTables.remove(tableSeats);
+            tableStatus.getOccupiedList().add(tableSeats);
 
             lock.unlock();
             return true;
         }
+
         lock.unlock();
         logger.info("{} will have to wait.", name);
         return false;

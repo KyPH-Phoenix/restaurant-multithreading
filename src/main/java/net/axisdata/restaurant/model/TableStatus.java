@@ -4,14 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TableStatus {
-    private List<Table> occupiedList = new ArrayList<>();
-    private List<Table> freeList = new ArrayList<>();
+    private final List<Integer> occupiedList = new ArrayList<>();
+    private final List<Integer> freeList = new ArrayList<>();
 
-    public List<Table> getOccupiedList() {
+    public List<Integer> getOccupiedList() {
         return occupiedList;
     }
 
-    public List<Table> getFreeList() {
+    public List<Integer> getFreeList() {
         return freeList;
     }
 }
